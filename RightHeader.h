@@ -16,13 +16,13 @@ public:
     // ✅ Add backend to constructor
     explicit RightHeader(ClientBackend *backend, QWidget *parent = nullptr);
     void updateStatusText(const QString &text, bool isAutoMode = false);
-
+public slots:
+    void updateTelemetryUI();
 signals:
     void menuClicked();
     void swipeLockChanged(bool isUnlocked);
 
-private slots:
-    void updateTelemetryUI(); // ✅ Auto-updates safety and standby states
+
 
 private:
     ClientBackend *m_backend;

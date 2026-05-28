@@ -109,11 +109,11 @@ LoginDialog::LoginDialog(ClientBackend *backend, QWidget *parent)
     connect(btnLogin, &QPushButton::clicked, this, &LoginDialog::handleLoginClicked);
     connect(btnDesignMode, &QPushButton::clicked, this, &LoginDialog::handleDesignModeClicked);
 
-    if (m_backend) {
-        connect(m_backend, &ClientBackend::loginAccepted, this, &LoginDialog::onLoginAccepted);
-        connect(m_backend, &ClientBackend::loginRejected, this, &LoginDialog::onLoginRejected);
-        connect(m_backend, &ClientBackend::connectionClosed, this, &LoginDialog::onConnectionClosed);
-    }
+    //if (m_backend) {
+    //  connect(m_backend, &ClientBackend::loginAccepted, this, &LoginDialog::onLoginAccepted);
+    //  connect(m_backend, &ClientBackend::loginRejected, this, &LoginDialog::onLoginRejected);
+    //  connect(m_backend, &ClientBackend::connectionClosed, this, &LoginDialog::onConnectionClosed);
+    //}
 }
 
 QString LoginDialog::getSelectedRole() {
@@ -127,10 +127,10 @@ void LoginDialog::handleLoginClicked() {
     btnLogin->setText("CONNECTING...");
     btnLogin->setEnabled(false);
 
-    if (m_backend) {
-        m_backend->setProperty("authId", "TX-DESKTOP-DEBUG");
-        m_backend->connectAndLogin(ipInput->text(), getSelectedRole(), userInput->text(), passInput->text());
-    }
+    //if (m_backend) {
+    //    m_backend->setProperty("authId", "TX-DESKTOP-DEBUG");
+      //  m_backend->connectAndLogin(ipInput->text(), getSelectedRole(), userInput->text(), passInput->text());
+    //}
 }
 
 void LoginDialog::handleDesignModeClicked() {

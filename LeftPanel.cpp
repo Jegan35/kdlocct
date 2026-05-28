@@ -11,6 +11,7 @@
 #include <QListWidget>
 #include <cmath>
 #include "StepControl.h"
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  DESIGN SYSTEM
 // ─────────────────────────────────────────────────────────────────────────────
@@ -194,7 +195,8 @@ LeftPanel::LeftPanel(ClientBackend *backend, QWidget *parent)
 
     if (m_backend) {
         connect(m_backend, &ClientBackend::telemetryChanged, this, &LeftPanel::updateTelemetryUI);
-        connect(m_backend, &ClientBackend::directoryDataChanged, this, &LeftPanel::updateDirectoryUI);
+        // DISABLED: directoryDataChanged signal does not exist in trimmed backend
+        // connect(m_backend, &ClientBackend::directoryDataChanged, this, &LeftPanel::updateDirectoryUI);
     }
 }
 
@@ -203,16 +205,12 @@ LeftPanel::LeftPanel(ClientBackend *backend, QWidget *parent)
 // ─────────────────────────────────────────────────────────────────────────────
 void LeftPanel::setupUI()
 {
-    // ── Root layout for LeftPanel ──────────────────────────────────
-    // Declared as local — topArea + footerStack are added directly.
-    // NEVER reassign this pointer inside lambdas or button handlers!
     QVBoxLayout *rootLayout = new QVBoxLayout(this);
     rootLayout->setContentsMargins(4, 4, 4, 20);
     rootLayout->setSpacing(2);
 
     // ══════════════════════════════════════════════════════════════
-    //  TOP AREA — 3D view + joints + coord readouts
-    //  stretch=1 → takes ALL space not claimed by the footer
+    //  TOP AREA
     // ══════════════════════════════════════════════════════════════
     QWidget *topArea = new QWidget(this);
     topArea->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -221,7 +219,6 @@ void LeftPanel::setupUI()
     topAreaLayout->setContentsMargins(0, 0, 0, 0);
     topAreaLayout->setSpacing(2);
 
-    // ── 3D Canvas (80%) + Joint column (20%) ──────────────────────
     QHBoxLayout *midLayout = new QHBoxLayout();
     midLayout->setSpacing(6);
 
@@ -243,12 +240,12 @@ void LeftPanel::setupUI()
     myMainWidget->setMinimumSize(100, 100);
     containerLay->addWidget(myMainWidget);
 
-    midLayout->addWidget(occtContainer, 4);  // 80%
+    midLayout->addWidget(occtContainer, 4);
 
     connect(myMainWidget, &OcctWidget::selectionChanged,
             this, &LeftPanel::partSelectionStateChanged);
 
-    // ── Joint column ──────────────────────────────────────────────
+    // Joint column
     QVBoxLayout *jointLayout = new QVBoxLayout();
     jointLayout->setSpacing(3);
 
@@ -263,9 +260,9 @@ void LeftPanel::setupUI()
         m_lblJoints[i]->setAlignment(Qt::AlignCenter);
         jointLayout->addWidget(m_lblJoints[i]);
     }
-    midLayout->addLayout(jointLayout, 1);    // 20%
+    midLayout->addLayout(jointLayout, 1);
 
-    // ── Coordinate readouts ───────────────────────────────────────
+    // Coordinate readouts
     QHBoxLayout *coordLayout = new QHBoxLayout();
     coordLayout->setSpacing(4);
 
@@ -282,13 +279,13 @@ void LeftPanel::setupUI()
     lblABC->setStyleSheet(DS::coordLbl(15));
     coordLayout->addWidget(lblABC, 2);
 
-    topAreaLayout->addLayout(midLayout,   1);   // 3D view expands
-    topAreaLayout->addLayout(coordLayout, 0);   // coord bar compact
+    topAreaLayout->addLayout(midLayout,   1);
+    topAreaLayout->addLayout(coordLayout, 0);
 
-    rootLayout->addWidget(topArea, 1);           // topArea takes all non-footer space
+    rootLayout->addWidget(topArea, 1);
 
     // ══════════════════════════════════════════════════════════════
-    //  FOOTER STACK — strictly frozen, nothing can disturb it
+    //  FOOTER STACK
     // ══════════════════════════════════════════════════════════════
     footerStack = new QStackedWidget(this);
 
@@ -303,31 +300,33 @@ void LeftPanel::setupUI()
     m_btnServo = new QPushButton("⬤  OFF", this);
     m_btnServo->setStyleSheet(DS::btnOff());
     connect(m_btnServo, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->toggleServo();
+        // DISABLED: m_backend->toggleServo() — not in trimmed backend
+        Q_UNUSED(m_backend);
     });
 
     QPushButton *btnHome = new QPushButton("⌂  HOME", this);
     btnHome->setStyleSheet(DS::btnHome());
+    // KEEP: This is the only active backend call
     connect(btnHome, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->triggerHome();
+        if (m_backend) m_backend->calculateAndRunHome();
     });
 
     m_btnRun = new QPushButton("▶  RUN", this);
     m_btnRun->setStyleSheet(DS::btnRun());
     connect(m_btnRun, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->toggleRunPause();
+        // DISABLED: m_backend->toggleRunPause() — not in trimmed backend
     });
 
     m_btnStart = new QPushButton("◼  START", this);
     m_btnStart->setStyleSheet(DS::btnStart());
     connect(m_btnStart, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->toggleStartStop();
+        // DISABLED: m_backend->toggleStartStop() — not in trimmed backend
     });
 
     QPushButton *btnExit = new QPushButton("✕  EXIT", this);
     btnExit->setStyleSheet(DS::btnExit());
     connect(btnExit, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->triggerExit();
+        // DISABLED: m_backend->triggerExit() — not in trimmed backend
     });
 
     m_btnMode = new QPushButton("M: SIM", this);
@@ -344,8 +343,12 @@ void LeftPanel::setupUI()
     modeMenu->addAction(actSim);
     modeMenu->addAction(actReal);
     m_btnMode->setMenu(modeMenu);
-    connect(actSim,  &QAction::triggered, [this]() { if (m_backend) m_backend->setSimMode();  });
-    connect(actReal, &QAction::triggered, [this]() { if (m_backend) m_backend->setRealMode(); });
+    connect(actSim,  &QAction::triggered, [this]() {
+        // DISABLED: m_backend->setSimMode() — not in trimmed backend
+    });
+    connect(actReal, &QAction::triggered, [this]() {
+        // DISABLED: m_backend->setRealMode() — not in trimmed backend
+    });
 
     footerGrid->addWidget(m_btnServo, 0, 0);
     footerGrid->addWidget(btnHome,    0, 1);
@@ -354,13 +357,11 @@ void LeftPanel::setupUI()
     footerGrid->addWidget(btnExit,    0, 4);
     footerGrid->addWidget(m_btnMode,  0, 5);
 
-    // ── System health button ──────────────────────────────────────
+    // System health button
     m_btnSysHealth = new QPushButton("●  SYSTEM OK", this);
     m_btnSysHealth->setStyleSheet(DS::btnOK());
 
     connect(m_btnSysHealth, &QPushButton::clicked, this, [this]() {
-        // ── FIX: Use a completely local QVBoxLayout for the dialog frame.
-        //         NEVER touch m_mainLayout or rootLayout here. ──────────
         QDialog dialog(this);
         dialog.setFixedSize(360, 160);
         dialog.setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
@@ -370,19 +371,15 @@ void LeftPanel::setupUI()
         QFrame *mainFrame = new QFrame(&dialog);
         mainFrame->setObjectName("container");
 
-        QString currentErr = m_backend ? m_backend->property("errorMessage").toString() : "";
-        QString errLower   = currentErr.toLower().trimmed();
-        bool isError = !currentErr.isEmpty()
-                       && errLower != "no active errors"
-                       && errLower != "no error"
-                       && errLower != "none";
-        if (!isError) currentErr = "SYSTEM IS OPERATIONAL";
+        // DISABLED: m_backend->property("errorMessage") — no property system in trimmed backend
+        // Always show operational since there's no error system
+        QString currentErr = "SYSTEM IS OPERATIONAL";
+        bool isError = false;
 
         mainFrame->setStyleSheet(QString(
                                      "#container { background-color: #0d1117; border: 3px solid %1; border-radius: 8px; }"
                                      ).arg(isError ? "#FF5252" : "#22C55E"));
 
-        // ── LOCAL layout for the frame — not m_mainLayout ──
         QVBoxLayout *frameLayout = new QVBoxLayout(mainFrame);
         frameLayout->setContentsMargins(0, 0, 0, 0);
         frameLayout->setSpacing(0);
@@ -421,7 +418,6 @@ void LeftPanel::setupUI()
         frameLayout->addWidget(lblMsg, 0, Qt::AlignTop);
         frameLayout->addStretch();
 
-        // ── Dialog outer layout ──
         QVBoxLayout *outer = new QVBoxLayout(&dialog);
         outer->setContentsMargins(0, 0, 0, 0);
         outer->addWidget(mainFrame);
@@ -436,18 +432,14 @@ void LeftPanel::setupUI()
     QPushButton *btnErrClr = new QPushButton("✕  ERRCLR", this);
     btnErrClr->setStyleSheet(DS::btnErrClr());
     connect(btnErrClr, &QPushButton::clicked, [this]() {
-        if (m_backend) {
-            m_backend->clearErrors();
-            m_backend->setProperty("errorMessage", "No Error");
-            m_backend->setProperty("isEmergency", false);
-        }
+        // DISABLED: m_backend->clearErrors(), setProperty, setProperty — not in trimmed backend
         updateTelemetryUI();
     });
 
     QPushButton *btnMrkClr = new QPushButton("◈  MRKCLR", this);
     btnMrkClr->setStyleSheet(DS::btnMrkClr());
     connect(btnMrkClr, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->clearMarks();
+        // DISABLED: m_backend->clearMarks() — not in trimmed backend
         if (myMainWidget) myMainWidget->clearMarks();
     });
 
@@ -481,7 +473,6 @@ void LeftPanel::setupUI()
         dialog.setStyleSheet(
             "QDialog { background-color: #141820; border: 1px solid #3A4460; border-radius: 8px; }");
 
-        // ── FIX: purely local layout for the dialog — not m_mainLayout ──
         QVBoxLayout *dlgLayout = new QVBoxLayout(&dialog);
         dlgLayout->setContentsMargins(15, 15, 15, 15);
         QStackedWidget *stack = new QStackedWidget(&dialog);
@@ -499,8 +490,8 @@ void LeftPanel::setupUI()
             "QPushButton:disabled { background-color: #1C2130; color: #3A4460; }";
 
         // PAGE 0 – type select
-        QWidget *page0 = new QWidget();
-        QVBoxLayout *p0Layout = new QVBoxLayout(page0);
+        QWidget *page0dlg = new QWidget();
+        QVBoxLayout *p0Layout = new QVBoxLayout(page0dlg);
         QLabel *lblTitle0 = new QLabel("SELECT TYPE");
         lblTitle0->setStyleSheet("color: #8A9AB8; font-family: 'Rajdhani','Consolas',monospace;"
                                  "font-weight: 700; font-size: 13px; letter-spacing: 1.5px; border: none;");
@@ -562,10 +553,7 @@ void LeftPanel::setupUI()
         connect(txtFilename, &QLineEdit::textChanged,
                 [btnSubmitCreate](const QString &text) { btnSubmitCreate->setEnabled(!text.trimmed().isEmpty()); });
         connect(btnSubmitCreate, &QPushButton::clicked, [&]() {
-            if (m_backend) {
-                if (activeCategory == "TP") m_backend->handleNewTp(txtFilename->text());
-                else if (activeCategory == "PR") m_backend->handleNewPr(txtFilename->text());
-            }
+            // DISABLED: m_backend->handleNewTp / handleNewPr — not in trimmed backend
             dialog.accept();
         });
         p2BtnLayout->addWidget(btnCancelCreate); p2BtnLayout->addWidget(btnSubmitCreate);
@@ -632,21 +620,8 @@ void LeftPanel::setupUI()
         connect(fileList, &QListWidget::itemChanged, checkSubmitState);
 
         connect(btnSubmitList, &QPushButton::clicked, [&]() {
-            if (!m_backend) return;
-            if (currentAction == "OPEN" && fileList->currentItem()) {
-                QString selectedFile = fileList->currentItem()->text().split('|').first().trimmed();
-                if (activeCategory == "TP") { m_backend->handleOpenTp(selectedFile); emit requestTabChange(2); }
-                else if (activeCategory == "PR") { m_backend->handleOpenPr(selectedFile); emit requestTabChange(0); }
-            } else if (currentAction == "DELETE") {
-                for (int i = 0; i < fileList->count(); ++i) {
-                    QListWidgetItem *item = fileList->item(i);
-                    if (item->checkState() == Qt::Checked) {
-                        QString selectedFile = item->text().split('|').first().trimmed();
-                        if (activeCategory == "TP") m_backend->handleDeleteTp(selectedFile);
-                        else if (activeCategory == "PR") m_backend->handleDeletePr(selectedFile);
-                    }
-                }
-            }
+            // DISABLED: all file open/delete backend calls — not in trimmed backend
+            // m_backend->handleOpenTp / handleOpenPr / handleDeleteTp / handleDeletePr
             dialog.accept();
         });
 
@@ -656,46 +631,27 @@ void LeftPanel::setupUI()
         p3Layout->addWidget(fileList);
         p3Layout->addLayout(p3BtnLayout);
 
-        stack->addWidget(page0);
-        stack->addWidget(page1dlg);   // ← renamed to avoid shadow with outer page1
+        stack->addWidget(page0dlg);
+        stack->addWidget(page1dlg);
         stack->addWidget(page2);
         stack->addWidget(page3);
-        dlgLayout->addWidget(stack);  // ← FIX: was m_mainLayout->addWidget(stack)
+        dlgLayout->addWidget(stack);
 
         auto populateFiles = [&]() {
             fileList->clear();
-            if (m_backend) {
-                QStringList list;
-                if (activeCategory == "TP") list = m_backend->property("tpFileList").toStringList();
-                else if (activeCategory == "PR") list = m_backend->property("prFileList").toStringList();
-                else if (activeCategory == "TR") list = m_backend->property("trFileList").toStringList();
-                for (const QString &fileStr : list) {
-                    QListWidgetItem *item = new QListWidgetItem(fileStr, fileList);
-                    if (currentAction == "DELETE") {
-                        item->setFlags(item->flags() | Qt::ItemIsUserCheckable);
-                        item->setCheckState(Qt::Unchecked);
-                    }
-                }
-            }
-            btnSubmitList->setEnabled(false);
+            // DISABLED: m_backend->property("tpFileList") etc. — not in trimmed backend
         };
 
-        if (m_backend)
-            connect(m_backend, &ClientBackend::directoryDataChanged, &dialog,
-                    [&, stack, populateFiles]() { if (stack->currentIndex() == 3) populateFiles(); });
+        // DISABLED: directoryDataChanged connection — not in trimmed backend
+        // connect(m_backend, &ClientBackend::directoryDataChanged, ...);
 
         connect(btnRefreshList, &QPushButton::clicked, [&]() {
-            if (m_backend) {
-                btnRefreshList->setText("…");
-                QTimer::singleShot(200, &dialog, [btnRefreshList]() { btnRefreshList->setText("↺"); });
-                if (activeCategory == "TP") m_backend->refreshTpFiles();
-                else if (activeCategory == "PR") m_backend->refreshPrFiles();
-            }
+            // DISABLED: m_backend->refreshTpFiles / refreshPrFiles — not in trimmed backend
         });
 
-        connect(btnTp, &QPushButton::clicked, [&]() { activeCategory = "TP"; lblTitle1->setText("TP OPERATIONS"); stack->setCurrentIndex(1); });
-        connect(btnPr, &QPushButton::clicked, [&]() { activeCategory = "PR"; lblTitle1->setText("PR OPERATIONS"); stack->setCurrentIndex(1); });
-        connect(btnTr, &QPushButton::clicked, [&]() { activeCategory = "TR"; lblTitle1->setText("TR OPERATIONS"); stack->setCurrentIndex(1); });
+        connect(btnTp,  &QPushButton::clicked, [&]() { activeCategory = "TP"; lblTitle1->setText("TP OPERATIONS"); stack->setCurrentIndex(1); });
+        connect(btnPr,  &QPushButton::clicked, [&]() { activeCategory = "PR"; lblTitle1->setText("PR OPERATIONS"); stack->setCurrentIndex(1); });
+        connect(btnTr,  &QPushButton::clicked, [&]() { activeCategory = "TR"; lblTitle1->setText("TR OPERATIONS"); stack->setCurrentIndex(1); });
         connect(btnNew, &QPushButton::clicked, [&]() { lblTitle2->setText("CREATE NEW " + activeCategory); txtFilename->clear(); stack->setCurrentIndex(2); });
 
         connect(btnOpen, &QPushButton::clicked, [&]() {
@@ -704,8 +660,9 @@ void LeftPanel::setupUI()
             lblTitle3->setStyleSheet("color: #00D4FF; font-family: 'Rajdhani','Consolas',monospace; font-weight: 700; font-size: 13px; letter-spacing: 1.5px; border: none;");
             btnSubmitList->setText("OPEN");
             btnSubmitList->setStyleSheet(baseStyle + "QPushButton { background-color: #1565C0; border-bottom: 4px solid #0D3B80; padding: 10px; }");
-            if (m_backend) { if (activeCategory == "TP") m_backend->refreshTpFiles(); else if (activeCategory == "PR") m_backend->refreshPrFiles(); }
-            populateFiles(); stack->setCurrentIndex(3);
+            // DISABLED: m_backend->refreshTpFiles / refreshPrFiles
+            populateFiles();
+            stack->setCurrentIndex(3);
         });
 
         connect(btnDelete, &QPushButton::clicked, [&]() {
@@ -714,8 +671,9 @@ void LeftPanel::setupUI()
             lblTitle3->setStyleSheet("color: #FF3B3B; font-family: 'Rajdhani','Consolas',monospace; font-weight: 700; font-size: 13px; letter-spacing: 1.5px; border: none;");
             btnSubmitList->setText("DELETE");
             btnSubmitList->setStyleSheet(baseStyle + "QPushButton { background-color: #B71C1C; border-bottom: 4px solid #7A0000; padding: 10px; }");
-            if (m_backend) { if (activeCategory == "TP") m_backend->refreshTpFiles(); else if (activeCategory == "PR") m_backend->refreshPrFiles(); }
-            populateFiles(); stack->setCurrentIndex(3);
+            // DISABLED: m_backend->refreshTpFiles / refreshPrFiles
+            populateFiles();
+            stack->setCurrentIndex(3);
         });
 
         connect(btnClose,        &QPushButton::clicked, &dialog, &QDialog::reject);
@@ -770,33 +728,20 @@ void LeftPanel::setupUI()
     footerStack->addWidget(page0);
     footerStack->addWidget(page1);
 
-    // ── FOOTER LOCK: setFixedHeight + Fixed policy = nothing can disturb it ──
-    footerStack->setFixedHeight(120);
+    footerStack->setFixedHeight(105);
     footerStack->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-    rootLayout->addWidget(footerStack, 0);   // stretch=0 — footer never grows
+    rootLayout->addWidget(footerStack, 0);
 
-    // ── Timers & event filter ─────────────────────────────────────
+    // Timers & event filter
     QTimer::singleShot(500, myMainWidget, &OcctWidget::loadDefaultRobot);
     qApp->installEventFilter(this);
     dragStartPos = QPoint(-1, -1);
 
-    QTimer *dummyTimer = new QTimer(this);
-    connect(dummyTimer, &QTimer::timeout, this, [this]() {
-        if (!this->isVisible()) return;
-        if (m_backend && m_backend->property("currentMode").toString() == "Real") return;
-        if (m_backend && !m_backend->property("isWebClientConnected").toBool()) {
-            static double t = 0;
-            t += 0.02;
-            m_backend->setProperty("j1", std::sin(t) * 45.0);
-            m_backend->setProperty("j2", std::cos(t) * 30.0 - 15.0);
-            m_backend->setProperty("j3", std::sin(t * 1.5) * 40.0 + 20.0);
-            m_backend->setProperty("j4", std::cos(t * 2.0) * 90.0);
-            m_backend->setProperty("j5", std::sin(t) * 60.0);
-            m_backend->setProperty("j6", t * 50.0);
-            updateTelemetryUI();
-        }
-    });
-    dummyTimer->start(50);
+    // DISABLED: dummyTimer that sets fake telemetry via backend properties
+    // The trimmed backend does not have a property system for j1..j6 externally set
+    // QTimer *dummyTimer = new QTimer(this);
+    // connect(dummyTimer, &QTimer::timeout, this, [this]() { ... });
+    // dummyTimer->start(50);
 
     connect(myMainWidget, &OcctWidget::robotLoadComplete, this, [this]() {
         QTimer::singleShot(50, this, [this]() {
@@ -808,6 +753,7 @@ void LeftPanel::setupUI()
             });
         });
     });
+
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -819,6 +765,7 @@ void LeftPanel::updateTelemetryUI()
     if (m_uiThrottleTimer.elapsed() < 33) return;
     m_uiThrottleTimer.restart();
 
+    // Read j1..j6 from backend Qt properties (set by playbackTick)
     lblXYZ->setText(QString("X  %1 mm\nY  %2 mm\nZ  %3 mm")
                         .arg(m_backend->property("x").toDouble(), 0, 'f', 3)
                         .arg(m_backend->property("y").toDouble(), 0, 'f', 3)
@@ -844,68 +791,17 @@ void LeftPanel::updateTelemetryUI()
             m_backend->property("j6").toDouble() * d2r);
     }
 
-    if (m_backend->property("isServoOn").toBool()) {
-        m_btnServo->setText("⬤  ON");
-        m_btnServo->setStyleSheet(DS::btnOK());
-    } else {
-        m_btnServo->setText("⬤  OFF");
-        m_btnServo->setStyleSheet(DS::btnOff());
-    }
-
-    if (m_backend->property("isRunning").toBool()) {
-        m_btnRun->setText("⏸  PAUSE");
-        m_btnRun->setStyleSheet(DS::btnPause());
-    } else {
-        m_btnRun->setText("▶  RUN");
-        m_btnRun->setStyleSheet(DS::btnRun());
-    }
-
-    if (m_backend->property("isStarted").toBool()) {
-        m_btnStart->setText("■  STOP");
-        m_btnStart->setStyleSheet(DS::btnStop());
-    } else {
-        m_btnStart->setText("◼  START");
-        m_btnStart->setStyleSheet(DS::btnStart());
-    }
-
-    QString currentMode  = m_backend->property("currentMode").toString();
-    QString btnModeExtra = " QPushButton::menu-indicator { image: none; }";
-    m_btnMode->setText("M: " + currentMode.toUpper());
-    m_btnMode->setStyleSheet((currentMode == "Sim" ? DS::btnSim() : DS::btnReal()) + btnModeExtra);
-
-    QString errorMsg  = m_backend->property("errorMessage").toString().trimmed();
-    bool isEmergency  = m_backend->property("isEmergency").toBool();
-    QString errLower  = errorMsg.toLower();
-    bool hasError     = isEmergency || (!errorMsg.isEmpty()
-                                    && errLower != "no active errors"
-                                    && errLower != "no error"
-                                    && errLower != "none");
-
-    if (hasError) {
-        m_btnSysHealth->setText("⚠  VIEW ERROR");
-        m_btnSysHealth->setStyleSheet(DS::btnError());
-    } else {
-        m_btnSysHealth->setText("●  SYSTEM OK");
-        m_btnSysHealth->setStyleSheet(DS::btnOK());
-    }
+    // DISABLED: isServoOn, isRunning, isStarted, currentMode, errorMessage, isEmergency
+    // — none of these properties exist in the trimmed backend
+    // Buttons stay at their default visual state (OFF / RUN / START / SIM / OK)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-//  updateDirectoryUI
+//  updateDirectoryUI  — DISABLED: no directory system in trimmed backend
 // ─────────────────────────────────────────────────────────────────────────────
 void LeftPanel::updateDirectoryUI()
 {
-    if (!m_backend) return;
-
-    auto formatFileName = [](const QString &fullString) {
-        QString name = fullString.split('|').first().trimmed();
-        if (name.isEmpty() || name == "None") return QString("None");
-        if (name.length() > 12) name = name.left(10) + "…";
-        return name;
-    };
-
-    m_lblTP->setText("TP: " + formatFileName(m_backend->property("currentTpName").toString()));
-    m_lblPR->setText("PR: " + formatFileName(m_backend->property("currentPrName").toString()));
+    // DISABLED: m_backend->property("currentTpName") / "currentPrName" — not in trimmed backend
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

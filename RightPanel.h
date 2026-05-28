@@ -29,6 +29,7 @@ public:
 
 public slots:
     void setGetPointsEnabled(bool enabled);
+    void updateOriginLabel(double x, double y, double z);
 
 signals:
     void swipeLockToggled(bool isUnlocked);
@@ -47,6 +48,7 @@ private slots:
     void onHighlightChanged();
 
 private:
+    QLabel* m_lblOrigin = nullptr;
     OcctWidget *m_dxfPreviewWidget = nullptr;
     QTextEdit *m_txtCoordinates = nullptr;
     void setupUI();

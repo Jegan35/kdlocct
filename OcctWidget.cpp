@@ -247,7 +247,7 @@ void OcctWidget::loadStepFile(const std::string& filePath)
 
             // 6. Setup your origin and positioning
             myCustomOrigin = gp_Pnt(0.0, 0.0, 0.0);
-            offsetWorkpiece(.0, -800.0, 0.0);
+            offsetWorkpiece(.0, -800.0, 600.0);
 
             // Only fit the camera if this is the SideRole (DXF view)
             if (myRole == OcctWidget::SideRole) {
@@ -647,16 +647,18 @@ void OcctWidget::displayIsolatedPart(const TopoDS_Shape& shape)
     Handle(AIS_Shape) aisShape = new AIS_Shape(shape);
     myContext->SetDisplayMode(aisShape, 1, Standard_False);
 
-    // Change to Silver/Grey so the Cyan hover-blink is highly visible
     myContext->SetColor(aisShape, Quantity_NOC_GRAY75, Standard_False);
     myContext->SetMaterial(aisShape, Graphic3d_NOM_ALUMINIUM, Standard_False);
 
     myContext->Display(aisShape, Standard_False);
 
-    // Force the shape to use the dropdown's rule, not the default!
     setSelectionMode(myCurrentSelectionMode);
 
     myView->FitAll();
+
+    // ADD THIS LINE: Zoom in 40% closer for isolated parts
+    myView->SetZoom(1.4);
+
     myView->Redraw();
 }
 
@@ -735,10 +737,17 @@ void OcctWidget::loadNextRobotLink()
         // We wait 250ms to guarantee the Qt layout has completely
         // finished stretching to fullscreen before we calculate the zoom.
         // ==========================================================
+        // ==========================================================
+        // ✅ THE FIX: DELAYED CAMERA CENTERING & ZOOM
+        // ==========================================================
         QTimer::singleShot(250, this, [this]() {
             if (!myView.IsNull()) {
                 myView->MustBeResized(); // Sync with X11 OS Window
                 myView->FitAll();        // Perfectly frame the grid and robot
+
+                // ADD THIS LINE: Zoom in 30% closer to eliminate dead space
+                myView->SetZoom(1.3);
+
                 myView->Redraw();        // Paint it to the screen
             }
         });
@@ -928,129 +937,7 @@ void OcctWidget::updateRobotPosture(double j1, double j2, double j3, double j4, 
     // ========================================================
     this->update();
 }
-void OcctWidget::drawRoomGrid()
-{
-    // Defined boundaries
-    double minX = -2000.0, maxX = 2000.0;
-    double minY = -2000.0, maxY = 2000.0;
-    double minZ = 0.0, maxZ = 2000.0;
-    double step = 100.0;
 
-    TopoDS_Compound floorComp, backWallComp, leftWallComp;
-    BRep_Builder builder;
-    builder.MakeCompound(floorComp);
-    builder.MakeCompound(backWallComp);
-    builder.MakeCompound(leftWallComp);
-
-    for (double x = minX; x <= maxX; x += step)
-        builder.Add(floorComp, BRepBuilderAPI_MakeEdge(gp_Pnt(x, minY, minZ), gp_Pnt(x, maxY, minZ)));
-    for (double y = minY; y <= maxY; y += step)
-        builder.Add(floorComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, y, minZ), gp_Pnt(maxX, y, minZ)));
-
-    for (double x = minX; x <= maxX; x += step)
-        builder.Add(backWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(x, maxY, minZ), gp_Pnt(x, maxY, maxZ)));
-    for (double z = minZ; z <= maxZ; z += step)
-        builder.Add(backWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, maxY, z), gp_Pnt(maxX, maxY, z)));
-
-    for (double y = minY; y <= maxY; y += step)
-        builder.Add(leftWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, y, minZ), gp_Pnt(minX, y, maxZ)));
-    for (double z = minZ; z <= maxZ; z += step)
-        builder.Add(leftWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, minY, z), gp_Pnt(minX, maxY, z)));
-
-    Handle(AIS_Shape) aisFloor = new AIS_Shape(floorComp);
-    Handle(AIS_Shape) aisBack = new AIS_Shape(backWallComp);
-    Handle(AIS_Shape) aisLeft = new AIS_Shape(leftWallComp);
-
-    // ==========================================
-    // ✅ LIGHT RED FLOOR (Perfect contrast for labels)
-    // ==========================================
-    Quantity_Color lightRedFloor(Quantity_NOC_INDIANRED1);
-    myContext->SetColor(aisFloor, lightRedFloor, Standard_False);
-    myContext->SetColor(aisBack, Quantity_NOC_STEELBLUE, Standard_False);
-    myContext->SetColor(aisLeft, Quantity_NOC_SEAGREEN, Standard_False);
-
-    myContext->Display(aisFloor, Standard_False);
-    myContext->Display(aisBack, Standard_False);
-    myContext->Display(aisLeft, Standard_False);
-    myContext->Deactivate(aisFloor);
-    myContext->Deactivate(aisBack);
-    myContext->Deactivate(aisLeft);
-
-    // ==========================================
-    // ✅ TRUE 3D AXIS LABELS (Physical Size: 80mm)
-    // ==========================================
-    int textSize = 60;
-
-    // RED LABELS (X-Axis)
-    for (int x = -2000; x <= 2000; x += 100) {
-        if (x == 0) continue;
-        Handle(AIS_TextLabel) xLabel = new AIS_TextLabel();
-        xLabel->SetText(TCollection_ExtendedString(x));
-        xLabel->SetPosition(gp_Pnt(x, minY - 50.0, 0));
-        xLabel->SetHeight(textSize);
-        xLabel->SetColor(Quantity_NOC_RED);
-        xLabel->SetZoomable(Standard_True); // True 3D object!
-        myContext->Display(xLabel, Standard_False);
-        myContext->Deactivate(xLabel);
-    }
-
-    // GREEN LABELS (Y-Axis)
-    for (int y = -2000; y <= 2000; y += 100) {
-        if (y == 0) continue;
-        Handle(AIS_TextLabel) yLabel = new AIS_TextLabel();
-        yLabel->SetText(TCollection_ExtendedString(y));
-        yLabel->SetPosition(gp_Pnt(maxX + 50.0, y, 0));
-        yLabel->SetHeight(textSize);
-        yLabel->SetColor(Quantity_NOC_GREEN);
-        yLabel->SetZoomable(Standard_True);
-        myContext->Display(yLabel, Standard_False);
-        myContext->Deactivate(yLabel);
-    }
-
-    // BLUE LABELS (Z-Axis)
-    for (int z = 100; z <= 2000; z += 100) {
-        Handle(AIS_TextLabel) zLabel = new AIS_TextLabel();
-        zLabel->SetText(TCollection_ExtendedString(z));
-        zLabel->SetPosition(gp_Pnt(maxX + 50.0, maxY, z));
-        zLabel->SetHeight(textSize);
-        zLabel->SetColor(Quantity_NOC_BLUE1);
-        zLabel->SetZoomable(Standard_True);
-        myContext->Display(zLabel, Standard_False);
-        myContext->Deactivate(zLabel);
-    }
-
-    // ==========================================
-    // ✅ PERFECT SMALL POSTER LOGO
-    // ==========================================
-    Handle(AIS_TextLabel) titleLabel = new AIS_TextLabel();
-    titleLabel->SetText(TCollection_ExtendedString("TEXSONICS"));
-
-    // Perfectly centered at X = 0.0
-    titleLabel->SetPosition(gp_Pnt(0.0, maxY - 1.0, 1100));
-    titleLabel->SetHeight(60); // <--- Shrunk down to a clean, professional poster size
-    titleLabel->SetColor(Quantity_NOC_BLACK);
-    titleLabel->SetZoomable(Standard_True);
-    titleLabel->SetOrientation3D(gp_Ax2(gp_Pnt(0.0, maxY, 1200), gp_Dir(0, -1, 0), gp_Dir(1, 0, 0)));
-    titleLabel->SetHJustification(Graphic3d_HTA_CENTER);
-    myContext->Display(titleLabel, Standard_False);
-    myContext->Deactivate(titleLabel);
-
-    Handle(AIS_TextLabel) subLabel = new AIS_TextLabel();
-    subLabel->SetText(TCollection_ExtendedString("R O B O T I C S"));
-
-    subLabel->SetPosition(gp_Pnt(0.0, maxY - 1.0, 900));
-    subLabel->SetHeight(30); // <--- Small subtitle size
-    subLabel->SetColor(Quantity_NOC_BLACK);
-    subLabel->SetZoomable(Standard_True);
-    subLabel->SetOrientation3D(gp_Ax2(gp_Pnt(0.0, maxY, 900), gp_Dir(0, -1, 0), gp_Dir(1, 0, 0)));
-    subLabel->SetHJustification(Graphic3d_HTA_CENTER);
-    myContext->Display(subLabel, Standard_False);
-    myContext->Deactivate(subLabel);
-
-
-
-    myView->FitAll();
-}
 
 // ✅ NEW FUNCTION: Completely wipes the trail from memory and the 3D screen
 void OcctWidget::clearMarks()
@@ -1103,4 +990,127 @@ QString OcctWidget::getOriginText() const {
     .arg(myCustomOrigin.X(), 0, 'f', 3)
         .arg(myCustomOrigin.Y(), 0, 'f', 3)
         .arg(myCustomOrigin.Z(), 0, 'f', 3);
+}
+
+void OcctWidget::drawRoomGrid()
+{
+    // Defined boundaries
+    double minX = -2000.0, maxX = 2000.0;
+    double minY = -2000.0, maxY = 2000.0;
+    double minZ = 0.0, maxZ = 2000.0;
+    double step = 100.0;
+
+    TopoDS_Compound floorComp, backWallComp, leftWallComp;
+    BRep_Builder builder;
+    builder.MakeCompound(floorComp);
+    builder.MakeCompound(backWallComp);
+    builder.MakeCompound(leftWallComp);
+
+    for (double x = minX; x <= maxX; x += step)
+        builder.Add(floorComp, BRepBuilderAPI_MakeEdge(gp_Pnt(x, minY, minZ), gp_Pnt(x, maxY, minZ)));
+    for (double y = minY; y <= maxY; y += step)
+        builder.Add(floorComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, y, minZ), gp_Pnt(maxX, y, minZ)));
+
+    for (double x = minX; x <= maxX; x += step)
+        builder.Add(backWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(x, maxY, minZ), gp_Pnt(x, maxY, maxZ)));
+    for (double z = minZ; z <= maxZ; z += step)
+        builder.Add(backWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, maxY, z), gp_Pnt(maxX, maxY, z)));
+
+    for (double y = minY; y <= maxY; y += step)
+        builder.Add(leftWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, y, minZ), gp_Pnt(minX, y, maxZ)));
+    for (double z = minZ; z <= maxZ; z += step)
+        builder.Add(leftWallComp, BRepBuilderAPI_MakeEdge(gp_Pnt(minX, minY, z), gp_Pnt(minX, maxY, z)));
+
+    Handle(AIS_Shape) aisFloor = new AIS_Shape(floorComp);
+    Handle(AIS_Shape) aisBack = new AIS_Shape(backWallComp);
+    Handle(AIS_Shape) aisLeft = new AIS_Shape(leftWallComp);
+
+    // ==========================================
+    // ✅ LIGHT RED FLOOR (Perfect contrast for labels)
+    // ==========================================
+    Quantity_Color lightRedFloor(Quantity_NOC_INDIANRED1);
+    myContext->SetColor(aisFloor, lightRedFloor, Standard_False);
+    myContext->SetColor(aisBack, Quantity_NOC_STEELBLUE, Standard_False);
+    myContext->SetColor(aisLeft, Quantity_NOC_SEAGREEN, Standard_False);
+
+    myContext->Display(aisFloor, Standard_False);
+    myContext->Display(aisBack, Standard_False);
+    myContext->Display(aisLeft, Standard_False);
+    myContext->Deactivate(aisFloor);
+    myContext->Deactivate(aisBack);
+    myContext->Deactivate(aisLeft);
+
+    // ==========================================
+    // ✅ CORRECTED 3D AXIS LABELS (Physical Size: 80mm)
+    // Here we swap where the labels are drawn so they match the Robot's orientation.
+    // ==========================================
+    int textSize = 60;
+
+    // RED LABELS (Now drawn along the visual Y-axis, which is the Robot's X)
+    for (int y = -2000; y <= 2000; y += 100) {
+        if (y == 0) continue;
+        Handle(AIS_TextLabel) xLabel = new AIS_TextLabel();
+        // NOTE: We print the 'Y' coordinate value, but color it RED to act as the Robot's X
+        xLabel->SetText(TCollection_ExtendedString(std::abs(y))); // Optional: Make numbers positive
+        xLabel->SetPosition(gp_Pnt(minX - 50.0, y, 0));
+        xLabel->SetHeight(textSize);
+        xLabel->SetColor(Quantity_NOC_RED);
+        xLabel->SetZoomable(Standard_True);
+        myContext->Display(xLabel, Standard_False);
+        myContext->Deactivate(xLabel);
+    }
+
+    // GREEN LABELS (Now drawn along the visual X-axis, which is the Robot's Y)
+    for (int x = -2000; x <= 2000; x += 100) {
+        if (x == 0) continue;
+        Handle(AIS_TextLabel) yLabel = new AIS_TextLabel();
+        yLabel->SetText(TCollection_ExtendedString(x));
+        yLabel->SetPosition(gp_Pnt(x, minY - 50.0, 0));
+        yLabel->SetHeight(textSize);
+        yLabel->SetColor(Quantity_NOC_GREEN);
+        yLabel->SetZoomable(Standard_True);
+        myContext->Display(yLabel, Standard_False);
+        myContext->Deactivate(yLabel);
+    }
+
+    // BLUE LABELS (Z-Axis remains the same)
+    for (int z = 100; z <= 2000; z += 100) {
+        Handle(AIS_TextLabel) zLabel = new AIS_TextLabel();
+        zLabel->SetText(TCollection_ExtendedString(z));
+        zLabel->SetPosition(gp_Pnt(maxX + 50.0, maxY, z));
+        zLabel->SetHeight(textSize);
+        zLabel->SetColor(Quantity_NOC_BLUE1);
+        zLabel->SetZoomable(Standard_True);
+        myContext->Display(zLabel, Standard_False);
+        myContext->Deactivate(zLabel);
+    }
+
+    // ==========================================
+    // ✅ PERFECT SMALL POSTER LOGO
+    // ==========================================
+    Handle(AIS_TextLabel) titleLabel = new AIS_TextLabel();
+    titleLabel->SetText(TCollection_ExtendedString("TEXSONICS"));
+
+    titleLabel->SetPosition(gp_Pnt(0.0, maxY - 1.0, 1100));
+    titleLabel->SetHeight(60);
+    titleLabel->SetColor(Quantity_NOC_BLACK);
+    titleLabel->SetZoomable(Standard_True);
+    titleLabel->SetOrientation3D(gp_Ax2(gp_Pnt(0.0, maxY, 1200), gp_Dir(0, -1, 0), gp_Dir(1, 0, 0)));
+    titleLabel->SetHJustification(Graphic3d_HTA_CENTER);
+    myContext->Display(titleLabel, Standard_False);
+    myContext->Deactivate(titleLabel);
+
+    Handle(AIS_TextLabel) subLabel = new AIS_TextLabel();
+    subLabel->SetText(TCollection_ExtendedString("R O B O T I C S"));
+
+    subLabel->SetPosition(gp_Pnt(0.0, maxY - 1.0, 900));
+    subLabel->SetHeight(30);
+    subLabel->SetColor(Quantity_NOC_BLACK);
+    subLabel->SetZoomable(Standard_True);
+    subLabel->SetOrientation3D(gp_Ax2(gp_Pnt(0.0, maxY, 900), gp_Dir(0, -1, 0), gp_Dir(1, 0, 0)));
+    subLabel->SetHJustification(Graphic3d_HTA_CENTER);
+    myContext->Display(subLabel, Standard_False);
+    myContext->Deactivate(subLabel);
+
+    myView->FitAll();
 }

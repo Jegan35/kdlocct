@@ -128,6 +128,10 @@ void StepControl::applyPosition()
         double y = m_inY->text().toDouble();
         double z = m_inZ->text().toDouble();
 
+        // Tell the 3D Widget to move the part
         m_occtWidget->offsetWorkpiece(x, y, z);
+
+        // ✅ Tell the UI to update the label!
+        emit originChanged(x, y, z);
     }
 }

@@ -51,9 +51,9 @@ RightHeader::RightHeader(ClientBackend *backend, QWidget *parent)
     btnStandby->setStyleSheet("background-color: transparent; border: 2px solid #10B981; color: #10B981; font-weight: bold; padding: 5px 15px; border-radius: 4px;");
 
     // Wire Standby to Emergency Stop
-    connect(btnStandby, &QPushButton::clicked, this, [this]() {
-        if (m_backend) m_backend->toggleEmergencyStop();
-    });
+    //connect(btnStandby, &QPushButton::clicked, this, [this]() {
+    //    if (m_backend) m_backend->toggleEmergencyStop();
+    //});
 
     // Assemble Layout
     layout->addWidget(btnMenu);
@@ -66,9 +66,9 @@ RightHeader::RightHeader(ClientBackend *backend, QWidget *parent)
     connect(btnSwipeToggle, &QPushButton::toggled, this, &RightHeader::swipeLockChanged);
 
     // ✅ Backend Telemetry Connection
-    if (m_backend) {
-        connect(m_backend, &ClientBackend::telemetryChanged, this, &RightHeader::updateTelemetryUI);
-    }
+    //if (m_backend) {
+      //  connect(m_backend, &ClientBackend::telemetryChanged, this, &RightHeader::updateTelemetryUI);
+    //}
 }
 
 void RightHeader::updateStatusText(const QString &text, bool isAutoMode)
@@ -81,7 +81,7 @@ void RightHeader::updateStatusText(const QString &text, bool isAutoMode)
     lblStatus->setStyleSheet(QString("color: %1; font-weight: bold; font-size: 14px;").arg(bulbColor));
 }
 
-void RightHeader::updateTelemetryUI()
+/*void RightHeader::updateTelemetryUI()
 {
     if (!m_backend) return;
 
@@ -103,4 +103,11 @@ void RightHeader::updateTelemetryUI()
         btnStandby->setText("STANDBY");
         btnStandby->setStyleSheet("border: 2px solid #10B981; color: #10B981; font-weight: bold; padding: 5px 15px; border-radius: 4px;");
     }
+} */
+// Add this to the bottom of RightHeader.cpp
+
+void RightHeader::updateTelemetryUI()
+{
+    // You can add your UI update logic here later
+    // For example, reading properties from m_backend and setting text labels
 }

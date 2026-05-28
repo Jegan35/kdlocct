@@ -13,6 +13,7 @@ public:
 
 signals:
     void requestDxfTab();
+    void originChanged(double x, double y, double z);
 
 private:
     OcctWidget* m_occtWidget;

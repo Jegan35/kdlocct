@@ -193,60 +193,60 @@ MenuTray::MenuTray(ClientBackend *backend, QWidget *parent)
     btnClose->setStyleSheet(MTray::raisedBtn("#EF4444", "#DC2626"));
     layout->addWidget(btnClose);
     // ── Animation ─────────────────────────────────────────────────
+    // ── Animation ─────────────────────────────────────────────────
     slideAnimation = new QPropertyAnimation(this, "geometry");
     slideAnimation->setDuration(220);
     slideAnimation->setEasingCurve(QEasingCurve::OutCubic);
 
-    // ── Signal wiring ─────────────────────────────────────────────
-    connect(btnJog, &QPushButton::clicked, [this]() {
+    // ==============================================================
+    // ✅ UNCOMMENTED & FIXED SIGNAL WIRING
+    // ==============================================================
+    connect(btnJog, &QPushButton::clicked, this, [this]() {
         jogSubMenu->setVisible(!jogSubMenu->isVisible());
         moveSubMenu->setVisible(false);
     });
-    connect(btnMove, &QPushButton::clicked, [this]() {
+    connect(btnMove, &QPushButton::clicked, this, [this]() {
         moveSubMenu->setVisible(!moveSubMenu->isVisible());
         jogSubMenu->setVisible(false);
     });
-    connect(btnClose, &QPushButton::clicked, [this]() {
+    connect(btnClose, &QPushButton::clicked, this, [this]() {
         if (parentWidget()) toggleTray(parentWidget()->width(), parentWidget()->height());
     });
 
-    connect(btnSpeed, &QPushButton::clicked, [this]() { emit modeSelected("SPEED"); });
+    // 🚀 Speed Panel-க்கு செல்ல:
+    connect(btnSpeed, &QPushButton::clicked, this, [this]() {
+        emit modeSelected("SPEED");
+    });
 
-    connect(btnAuto, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->setAutoMode();
+    // 🚀 Operating Modes:
+    connect(btnAuto, &QPushButton::clicked, this, [this]() {
         emit modeSelected("AUTO");
     });
-    connect(btnManual, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->setManualMode();
+    connect(btnManual, &QPushButton::clicked, this, [this]() {
         emit modeSelected("MANUAL");
     });
-    connect(btnRemote, &QPushButton::clicked, [this]() {
-        if (m_backend) m_backend->setRemoteMode();
+    connect(btnRemote, &QPushButton::clicked, this, [this]() {
         emit modeSelected("REMOTE");
     });
 
-    connect(btnJogCart, &QPushButton::clicked, [this, btnJogJnt]() {
+    // 🚀 Jog & Move Sub-menus (Cartesian & Joints):
+    connect(btnJogCart, &QPushButton::clicked, this, [this, btnJogJnt]() {
         btnJogJnt->setChecked(false);
-        if (m_backend) m_backend->setJogMode();
         emit modeSelected("JOG_CART");
     });
-    connect(btnJogJnt, &QPushButton::clicked, [this, btnJogCart]() {
+    connect(btnJogJnt, &QPushButton::clicked, this, [this, btnJogCart]() {
         btnJogCart->setChecked(false);
-        if (m_backend) m_backend->setJogMode();
         emit modeSelected("JOG_JNT");
     });
-    connect(btnMoveCart, &QPushButton::clicked, [this, btnMoveJnt]() {
+    connect(btnMoveCart, &QPushButton::clicked, this, [this, btnMoveJnt]() {
         btnMoveJnt->setChecked(false);
-        if (m_backend) m_backend->setMoveMode();
         emit modeSelected("MOVE_CART");
     });
-    connect(btnMoveJnt, &QPushButton::clicked, [this, btnMoveCart]() {
+    connect(btnMoveJnt, &QPushButton::clicked, this, [this, btnMoveCart]() {
         btnMoveCart->setChecked(false);
-        if (m_backend) m_backend->setMoveMode();
         emit modeSelected("MOVE_JNT");
     });
-}
-
+} // <--- End of MenuTray Constructor
 // ─────────────────────────────────────────────────────────────────────────────
 //  toggleTray
 // ─────────────────────────────────────────────────────────────────────────────

@@ -23,10 +23,16 @@ qt_add_executable(appOCCT
     RightPanel.h RightPanel.cpp
     RightHeader.h RightHeader.cpp
     MenuTray.h MenuTray.cpp
-    ClientBackend.h ClientBackend.cpp
+
     LineGeometry.h LineGeometry.cpp
     LoginDialog.h LoginDialog.cpp
     StepControl.h StepControl.cpp
+    scurve.h scurve.cpp
+    kinematic.h kinematic.cpp
+    ClientBackend.h ClientBackend.cpp
+
+
+
 )
 # ✅ 2. ADDED Qt6::Qml and Qt6::Quick3D to target_link_libraries
 target_link_libraries(appOCCT

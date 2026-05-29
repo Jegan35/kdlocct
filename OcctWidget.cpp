@@ -130,17 +130,20 @@ Handle(AIS_ColoredShape) OcctWidget::createThickTriad(double scale)
     coloredTriad->Attributes()->SetIsoOnTriangulation(Standard_False);
 
     // ========================================================
-    // ✅ FIX 2: அடர் நிறங்கள் (DARK COLORS) பயன்படுத்தப்பட்டுள்ளன!
-    // வெளிச்சமான பின்னணியில் (Grid) இது மிகத் தெளிவாகத் தெரியும்.
+    // ✅ FIX: RGB மதிப்புகளைக் கொண்டு துல்லியமான அடர் நிறங்கள் (Dark Colors)
     // ========================================================
-    coloredTriad->SetCustomColor(xCyl, Quantity_NOC_DARKRED);
-    coloredTriad->SetCustomColor(xCone, Quantity_NOC_DARKRED);
+    Quantity_Color darkRed(0.7, 0.0, 0.0, Quantity_TOC_RGB);   // அடர் சிவப்பு
+    Quantity_Color darkGreen(0.0, 0.6, 0.0, Quantity_TOC_RGB); // அடர் பச்சை
+    Quantity_Color darkBlue(0.0, 0.0, 0.7, Quantity_TOC_RGB);  // அடர் நீலம்
 
-    coloredTriad->SetCustomColor(yCyl, Quantity_NOC_DARKGREEN);
-    coloredTriad->SetCustomColor(yCone, Quantity_NOC_DARKGREEN);
+    coloredTriad->SetCustomColor(xCyl, darkRed);
+    coloredTriad->SetCustomColor(xCone, darkRed);
 
-    coloredTriad->SetCustomColor(zCyl, Quantity_NOC_DARKBLUE);
-    coloredTriad->SetCustomColor(zCone, Quantity_NOC_DARKBLUE);
+    coloredTriad->SetCustomColor(yCyl, darkGreen);
+    coloredTriad->SetCustomColor(yCone, darkGreen);
+
+    coloredTriad->SetCustomColor(zCyl, darkBlue);
+    coloredTriad->SetCustomColor(zCone, darkBlue);
 
     return coloredTriad;
 }
@@ -1139,8 +1142,7 @@ void OcctWidget::setUserFrameOrigin(double x, double y, double z)
     }
 
     if (myUserFrameMarker.IsNull()) {
-        // ✅ Scale-ஐ 3.5 ஆக மாற்றிவிட்டால் இன்னும் பெரிதாகத் தெரியும்!
-        myUserFrameMarker = createThickTriad(3.5);
+        myUserFrameMarker = createThickTriad(1.3);
         myContext->SetDisplayMode(myUserFrameMarker, 1, Standard_False);
         myContext->Display(myUserFrameMarker, Standard_False);
     }

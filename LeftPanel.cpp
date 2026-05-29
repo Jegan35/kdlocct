@@ -737,11 +737,7 @@ void LeftPanel::setupUI()
     qApp->installEventFilter(this);
     dragStartPos = QPoint(-1, -1);
 
-    // DISABLED: dummyTimer that sets fake telemetry via backend properties
-    // The trimmed backend does not have a property system for j1..j6 externally set
-    // QTimer *dummyTimer = new QTimer(this);
-    // connect(dummyTimer, &QTimer::timeout, this, [this]() { ... });
-    // dummyTimer->start(50);
+
 
     connect(myMainWidget, &OcctWidget::robotLoadComplete, this, [this]() {
         QTimer::singleShot(50, this, [this]() {

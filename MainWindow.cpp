@@ -63,6 +63,20 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     dashLayout->addWidget(this->mainSplitter, 1);
 
     // 5. Wire the Panels together
+    // ========================================================
+    // ✅ NEW: ROUTE FRAME COMMANDS TO THE LEFT PANEL (ROBOT GRAPH)
+    // ========================================================
+    connect(this->rightPanel, &RightPanel::requestMainLoadStep, this, [this](const QString& filePath){
+        if(this->leftPanel) this->leftPanel->getMainOcctWidget()->loadStepFile(filePath.toStdString());
+    });
+
+    connect(this->rightPanel, &RightPanel::requestMainClearStep, this, [this](){
+        if(this->leftPanel) this->leftPanel->getMainOcctWidget()->clearLoadedPart();
+    });
+
+    connect(this->rightPanel, &RightPanel::requestMainSetUserFrame, this, [this](double x, double y, double z){
+        if(this->leftPanel) this->leftPanel->getMainOcctWidget()->setUserFrameOrigin(x, y, z);
+    });
     connect(this->leftPanel->getMainOcctWidget(),  &OcctWidget::partSelectedForIsolation,
             this->rightPanel->getDxfPreviewWidget(), &OcctWidget::displayIsolatedPart);
 

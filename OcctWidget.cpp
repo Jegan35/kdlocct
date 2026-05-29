@@ -91,7 +91,7 @@ OcctWidget::~OcctWidget() {}
 
 
 // =================================================================
-// CREATES THICK 3D ARROWS (ULTRA-LIGHTWEIGHT PERFORMANCE)
+// CREATES THICK 3D ARROWS (DARKER & THICKER FOR BETTER VISIBILITY)
 // =================================================================
 Handle(AIS_ColoredShape) OcctWidget::createThickTriad(double scale)
 {
@@ -99,20 +99,21 @@ Handle(AIS_ColoredShape) OcctWidget::createThickTriad(double scale)
     BRep_Builder builder;
     builder.MakeCompound(triad);
 
-    double cylR = 4.0 * scale;   // Slightly adjusted for better visuals
-    double cylL = 80.0 * scale;
-    double coneR = 10.0 * scale;
-    double coneL = 20.0 * scale;
+    // ✅ FIX 1: தடிமனை (Thickness) அதிகப்படுத்தியுள்ளோம்!
+    double cylR = 7.0 * scale;   // உருளையின் தடிமன் (பழையது 4.0)
+    double cylL = 80.0 * scale;  // நீளம்
+    double coneR = 16.0 * scale; // அம்புக்குறியின் தடிமன் (பழையது 10.0)
+    double coneL = 25.0 * scale; // அம்புக்குறியின் நீளம்
 
-    // X Axis (Red)
+    // X Axis
     TopoDS_Shape xCyl = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0,0,0), gp_Dir(1,0,0)), cylR, cylL).Shape();
     TopoDS_Shape xCone = BRepPrimAPI_MakeCone(gp_Ax2(gp_Pnt(cylL,0,0), gp_Dir(1,0,0)), coneR, 0, coneL).Shape();
 
-    // Y Axis (Green)
+    // Y Axis
     TopoDS_Shape yCyl = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0,0,0), gp_Dir(0,1,0)), cylR, cylL).Shape();
     TopoDS_Shape yCone = BRepPrimAPI_MakeCone(gp_Ax2(gp_Pnt(0,cylL,0), gp_Dir(0,1,0)), coneR, 0, coneL).Shape();
 
-    // Z Axis (Blue)
+    // Z Axis
     TopoDS_Shape zCyl = BRepPrimAPI_MakeCylinder(gp_Ax2(gp_Pnt(0,0,0), gp_Dir(0,0,1)), cylR, cylL).Shape();
     TopoDS_Shape zCone = BRepPrimAPI_MakeCone(gp_Ax2(gp_Pnt(0,0,cylL), gp_Dir(0,0,1)), coneR, 0, coneL).Shape();
 
@@ -120,22 +121,26 @@ Handle(AIS_ColoredShape) OcctWidget::createThickTriad(double scale)
     builder.Add(triad, yCyl); builder.Add(triad, yCone);
     builder.Add(triad, zCyl); builder.Add(triad, zCone);
 
-    // 🚀 CRITICAL OPTIMIZATION: Force a coarse, lightweight mesh! (5.0 instead of 0.5)
+    // மெஷ் ஆப்டிமைசேஷன்
     BRepMesh_IncrementalMesh(triad, 5.0);
 
     Handle(AIS_ColoredShape) coloredTriad = new AIS_ColoredShape(triad);
 
-    // Turn off heavy edge calculations
     coloredTriad->Attributes()->SetFaceBoundaryDraw(Standard_False);
     coloredTriad->Attributes()->SetIsoOnTriangulation(Standard_False);
 
-    // Apply colors
-    coloredTriad->SetCustomColor(xCyl, Quantity_NOC_RED);
-    coloredTriad->SetCustomColor(xCone, Quantity_NOC_RED);
-    coloredTriad->SetCustomColor(yCyl, Quantity_NOC_GREEN);
-    coloredTriad->SetCustomColor(yCone, Quantity_NOC_GREEN);
-    coloredTriad->SetCustomColor(zCyl, Quantity_NOC_BLUE1);
-    coloredTriad->SetCustomColor(zCone, Quantity_NOC_BLUE1);
+    // ========================================================
+    // ✅ FIX 2: அடர் நிறங்கள் (DARK COLORS) பயன்படுத்தப்பட்டுள்ளன!
+    // வெளிச்சமான பின்னணியில் (Grid) இது மிகத் தெளிவாகத் தெரியும்.
+    // ========================================================
+    coloredTriad->SetCustomColor(xCyl, Quantity_NOC_DARKRED);
+    coloredTriad->SetCustomColor(xCone, Quantity_NOC_DARKRED);
+
+    coloredTriad->SetCustomColor(yCyl, Quantity_NOC_DARKGREEN);
+    coloredTriad->SetCustomColor(yCone, Quantity_NOC_DARKGREEN);
+
+    coloredTriad->SetCustomColor(zCyl, Quantity_NOC_DARKBLUE);
+    coloredTriad->SetCustomColor(zCone, Quantity_NOC_DARKBLUE);
 
     return coloredTriad;
 }
@@ -479,10 +484,8 @@ void OcctWidget::processWire(const TopoDS_Wire& wire, QTextStream& out, double r
             Standard_Real param = discretizer.Parameter(i);
             gp_Pnt pt = compCurve.Value(param);
 
-            double localX = pt.X() - myCustomOrigin.X();
-            double localY = pt.Y() - myCustomOrigin.Y();
-            double localZ = pt.Z() - myCustomOrigin.Z();
-            out << localX << "," << localY << "," << localZ << "\n";
+            // ✅ THE FIX: எதையும் கழிக்கக் கூடாது! நேரடியாக Absolute World Coordinate-ஐ அனுப்புகிறோம்.
+            out << pt.X() << "," << pt.Y() << "," << pt.Z() << "\n";
         }
     }
 }
@@ -501,10 +504,8 @@ void OcctWidget::processEdge(const TopoDS_Edge& edge, QTextStream& out, double r
             Standard_Real param = discretizer.Parameter(i);
             gp_Pnt pt = adaptor.Value(param);
 
-            double localX = pt.X() - myCustomOrigin.X();
-            double localY = pt.Y() - myCustomOrigin.Y();
-            double localZ = pt.Z() - myCustomOrigin.Z();
-            out << localX << "," << localY << "," << localZ << "\n";
+            // ✅ THE FIX: எதையும் கழிக்கக் கூடாது! நேரடியாக Absolute World Coordinate-ஐ அனுப்புகிறோம்.
+            out << pt.X() << "," << pt.Y() << "," << pt.Z() << "\n";
         }
     }
 }
@@ -1046,20 +1047,25 @@ void OcctWidget::drawRoomGrid()
     // ==========================================
     int textSize = 60;
 
+    // ==========================================
     // RED LABELS (Now drawn along the visual Y-axis, which is the Robot's X)
+    // ==========================================
     for (int y = -2000; y <= 2000; y += 100) {
         if (y == 0) continue;
         Handle(AIS_TextLabel) xLabel = new AIS_TextLabel();
         // NOTE: We print the 'Y' coordinate value, but color it RED to act as the Robot's X
-        xLabel->SetText(TCollection_ExtendedString(std::abs(y))); // Optional: Make numbers positive
-        xLabel->SetPosition(gp_Pnt(minX - 50.0, y, 0));
+        xLabel->SetText(TCollection_ExtendedString(std::abs(y)));
+
+        // ✅ FIX: 'minX - 50.0' என்பதை 'maxX + 50.0' என்று மாற்றிவிட்டோம்!
+        // இப்போது சிவப்பு எண்கள் வலதுபுறத்தில் தோன்றும்.
+        xLabel->SetPosition(gp_Pnt(maxX + 50.0, y, 0));
+
         xLabel->SetHeight(textSize);
         xLabel->SetColor(Quantity_NOC_RED);
         xLabel->SetZoomable(Standard_True);
         myContext->Display(xLabel, Standard_False);
         myContext->Deactivate(xLabel);
     }
-
     // GREEN LABELS (Now drawn along the visual X-axis, which is the Robot's Y)
     for (int x = -2000; x <= 2000; x += 100) {
         if (x == 0) continue;
@@ -1113,4 +1119,36 @@ void OcctWidget::drawRoomGrid()
     myContext->Deactivate(subLabel);
 
     myView->FitAll();
+}
+
+// ==========================================================
+// ✅ NEW: SET USER FRAME ORIGIN & DRAW 3D MARKER
+// ==========================================================
+void OcctWidget::setUserFrameOrigin(double x, double y, double z)
+{
+    if (myContext.IsNull()) return;
+
+
+    myCustomOrigin = gp_Pnt(x, y, z);
+
+
+    if (!myLoadedPart.IsNull()) {
+        gp_Trsf transform;
+        transform.SetTranslation(gp_Vec(x, y, z));
+        myContext->SetLocation(myLoadedPart, TopLoc_Location(transform));
+    }
+
+    if (myUserFrameMarker.IsNull()) {
+        // ✅ Scale-ஐ 3.5 ஆக மாற்றிவிட்டால் இன்னும் பெரிதாகத் தெரியும்!
+        myUserFrameMarker = createThickTriad(3.5);
+        myContext->SetDisplayMode(myUserFrameMarker, 1, Standard_False);
+        myContext->Display(myUserFrameMarker, Standard_False);
+    }
+
+    gp_Trsf markerTrsf;
+    markerTrsf.SetTranslation(gp_Vec(x, y, z));
+    myContext->SetLocation(myUserFrameMarker, TopLoc_Location(markerTrsf));
+
+    myContext->UpdateCurrentViewer();
+    emit statusUpdate(QString("📍 UserFrame Origin SET at X:%1 Y:%2 Z:%3").arg(x).arg(y).arg(z));
 }

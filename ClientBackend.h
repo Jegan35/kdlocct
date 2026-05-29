@@ -37,12 +37,14 @@ public slots:
     void setDegIncrement(const QString &val);
     void runDxfProgram(const QString &csvData);
     void stopDxfProgram();
+    void setAutoRunSpeed(int percent) { m_autoRunSpeedPercent = percent; }
 
 private slots:
     void jogTick();
     void executeStepJog();
 
 private:
+    int m_autoRunSpeedPercent = 100;
     std::vector<scurve::point> m_cartesianTrajectory;
     bool m_isCartesianPlayback = false;
     KDL::Frame m_userFrame;

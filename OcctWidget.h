@@ -49,7 +49,7 @@ public:
     bool hasLoadedPart() const { return !myLoadedPart.IsNull(); }
     void clearLoadedPart();
     void processCurrentSelection(double resolution);
-
+    void setUserFrameOrigin(double x, double y, double z);
     // Add this new line right below it to read the origin:
     QString getOriginText() const;
 
@@ -99,6 +99,7 @@ private:
     Handle(AIS_ColoredShape) myBaseTriad;
     Handle(AIS_ColoredShape) myTipTriad;
     Handle(AIS_ColoredShape) createThickTriad(double scale);
+    Handle(AIS_ColoredShape) myUserFrameMarker;
     int myCurrentLoadIndex = -1;
     void loadNextRobotLink();
     ViewRole myRole = MainRole;

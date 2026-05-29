@@ -3,6 +3,7 @@
 #include <QDebug>
 #include <cmath>
 #include <algorithm>
+#include <QMessageBox>
 //origin userframe 0.0, -800.0, 600.0
 // Include your kinematics
 #include "kinematic.h"
@@ -375,7 +376,7 @@ void ClientBackend::stopDxfProgram()
 }
 
 // ========================================================
-// ✅ OPTIMIZED AUTO-RUN PROGRAM (FAST & PERFECT POSITION)
+// ✅ OPTIMIZED AUTO-RUN PROGRAM (WITH TELEPORTATION FIX)
 // ========================================================
 void ClientBackend::runDxfProgram(const QString &csvData)
 {
@@ -388,11 +389,6 @@ void ClientBackend::runDxfProgram(const QString &csvData)
 
         QStringList parts = line.split(',');
         if (parts.size() >= 3) {
-
-            // ========================================================
-            // ✅ FIX 1: THE 90-DEGREE OFFSET CORRECTION
-            // OCCT-ல் இருந்து வரும் புள்ளிகளை KDL மூளைக்கு புரியும் படி மாற்றுகிறோம்!
-            // ========================================================
             double occt_x = parts[0].toDouble();
             double occt_y = parts[1].toDouble();
             double occt_z = parts[2].toDouble();
@@ -407,18 +403,63 @@ void ClientBackend::runDxfProgram(const QString &csvData)
 
     if (pathvec.size() < 2) return;
 
+    // 1. PRE-FLIGHT REACHABILITY CHECK
+    KDL::ChainFkSolverPos_recursive fksolver(KDLChain);
+    KDL::ChainIkSolverVel_pinv iksolverv(KDLChain);
+    KDL::ChainIkSolverPos_NR_JL iksolver(KDLChain, KDLJointMin, KDLJointMax, fksolver, iksolverv, 50, 1e-4);
+
+    KDL::JntArray temp_joints = KDLJointCur;
+    bool isReachable = true;
+    int failedPointIndex = -1;
+
+    for (size_t i = 0; i < pathvec.size(); i++) {
+        KDL::Frame target_base_cart(cart.M, KDL::Vector(pathvec[i].x, pathvec[i].y, pathvec[i].z));
+        KDL::JntArray out_joints(6);
+
+        if (iksolver.CartToJnt(temp_joints, target_base_cart, out_joints) < 0) {
+            isReachable = false;
+            failedPointIndex = i + 1;
+            break;
+        }
+        temp_joints = out_joints;
+    }
+
+    if (!isReachable) {
+        qDebug() << "❌ PRE-CHECK IK FAILED at path point:" << failedPointIndex;
+
+        // ⛔ THE FIX: Backend state-ஐ முழுமையாக Reset செய்கிறோம்!
+        if (m_playbackTimer && m_playbackTimer->isActive()) {
+            m_playbackTimer->stop();
+        }
+        m_isCartesianPlayback = false;
+        m_playbackIndex = 0;
+
+        QMessageBox::critical(nullptr, "Robot Out of Reach",
+                              QString("<b>❌ ROBOT OUT OF REACH!</b><br><br>"
+                                      "The generated toolpath is physically impossible for the robot to reach.<br>"
+                                      "Calculation failed at point #%1.<br><br>"
+                                      "<i>Hint: Move the User Frame closer to the robot base.</i>").arg(failedPointIndex));
+
+        // UI-க்கு சிக்னல் அனுப்புகிறோம் (பட்டனை பழையபடி மாற்ற)
+        emit programFinished();
+        return; // ⛔ இங்கு ரிட்டர்ன் ஆவதால் ரோபோ நகரவே நகராது!
+    }
+
     // ========================================================
-    // ✅ FIX 2: FAST & CRISP SPEED
+    // ✅ REACHABLE ஆக இருந்தால் மட்டுமே ரோபோ ஓடத் தொடங்கும்
     // ========================================================
+    pathvec.insert(pathvec.begin(), { cart.p.x(), cart.p.y(), cart.p.z() });
+
     scurve trajectoryPlanner;
-    double maxVel = 200.0; // 200 mm/s (ரோபோ வேகமாக வரையும்!)
+    double maxVel = 200.0 * (m_autoRunSpeedPercent / 100.0);
+    if (maxVel < 5.0) maxVel = 5.0;
     double maxAcc = 500.0;
 
     m_cartesianTrajectory = trajectoryPlanner.create_point_for_every_ms_path(maxVel, maxAcc, 0.0, 0.0, pathvec);
 
     m_isCartesianPlayback = true;
     m_playbackIndex = 0;
-    m_playbackTimer->start(16); // 16ms = 60 FPS
+    m_playbackTimer->start(16);
 
     qDebug() << "🚀 Program Started! Points loaded:" << m_cartesianTrajectory.size();
 }
